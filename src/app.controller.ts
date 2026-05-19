@@ -9,6 +9,10 @@ import {
   Req,
   UploadedFiles,
   UseInterceptors,
+  Header,
+  Param,
+  Res,
+  NotFoundException,
 } from '@nestjs/common';
 import { AppService } from './app.service';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
@@ -16,7 +20,9 @@ import { diskStorage } from 'multer';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
 import { PrismaService } from './prisma.service';
-
+import fs from 'fs';
+import path from 'node:path';
+import type { Request, Response } from 'express';
 @Controller()
 export class AppController {
   constructor(
@@ -72,7 +78,9 @@ export class AppController {
     const thumbnailFile = files.thumbnail?.[0];
 
     if (!videoFile || !thumbnailFile) {
-      throw new BadRequestException('Video and thumbnail are required');
+      throw new BadRequestException(
+        'Both video and thumbnail files are required',
+      );
     }
 
     return await this.prismaService.video.create({
@@ -87,6 +95,54 @@ export class AppController {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+    });
+  }
+
+  @Get('stream/:videoId')
+  @Header('Content-Type', 'video/mp4')
+  async streamVideo(
+    @Param('videoId') videoId: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ): Promise<any> {
+    // TODO: implementar stream de video
+    const video = await this.prismaService.video.findUnique({
+      where: {
+        id: videoId,
+      },
+    });
+
+    if (!video) {
+      throw new NotFoundException('Video not found');
+    }
+
+    const videoPath = path.join('.', video.url);
+    const filesize = fs.statSync(videoPath).size;
+
+    // Iniciar apartir de um ponto especifico do video
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : filesize - 1;
+
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(videoPath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${filesize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+
+      res.writeHead(HttpStatus.PARTIAL_CONTENT, head);
+      return file.pipe(res);
+    }
+
+    return res.writeHead(HttpStatus.OK, {
+      'Content-Length': filesize,
+      'Content-Type': 'video/mp4',
     });
   }
 }
