@@ -1,10 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client-js"
   moduleFormat = "cjs"
 }
 
@@ -13,13 +8,79 @@ datasource db {
 }
 
 model Video {
-  id           String   @id
-  title        String
-  description  String
+  id           String    @id
   url          String
-  sizeInKb    Int
+  sizeInKb     Int
   duration     Int
   thumbnailUrl String?
-  createdAt    DateTime 
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+  episodeId    String?
+  Movie        Movie?
+  Episode      Episode?  @relation(fields: [episodeId], references: [id])
+}
+
+model Content {
+  id          String    @id
+  title       String
+  type        String
+  description String
+  createdAt   DateTime
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  Movie       Movie?
+  TvShows     TvShow?
+}
+
+model Thumbnail {
+  id        String    @id
+  url       String
+  deletedAt DateTime?
+  createdAt DateTime
+  updatedAt DateTime  @updatedAt
+  Episodes  Episode[]
+  Movies    Movie[]
+  TvShows   TvShow[]
+}
+
+model Movie {
+  id          String     @id
+  createdAt   DateTime
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+  contentId   String     @unique
+  thumbnailId String?
+  videoId     String     @unique
+  Content     Content    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  Thumbnail   Thumbnail? @relation(fields: [thumbnailId], references: [id], onDelete: Cascade)
+  Video       Video      @relation(fields: [videoId], references: [id], onDelete: Cascade)
+}
+
+model TvShow {
+  id          String    @id
+  createdAt   DateTime
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  contentId   String    @unique
+  thumbnailId String
+  Episodes    Episode[]
+  Content     Content   @relation(fields: [contentId], references: [id])
+  Thumbnail   Thumbnail @relation(fields: [thumbnailId], references: [id])
+}
+
+model Episode {
+  id          String    @id
+  createdAt   DateTime
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  title       String
+  description String
+  season      String
+  number      Int
+  thumbnailId String
+  tvShowId    String
+  Thumbnail   Thumbnail @relation(fields: [thumbnailId], references: [id])
+  TvShow      TvShow    @relation(fields: [tvShowId], references: [id])
+  Videos      Video[]
 }

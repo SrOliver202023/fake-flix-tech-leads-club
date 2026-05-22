@@ -2,9 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
   "moduleNameMapper": {
-    "@src/(.*)": "<rootDir>/src/$1",
-    "(.*)/prisma/client/(.*)\\.js$": "$1/prisma/client/$2",
-    "^generated/(.*)$": "<rootDir>/generated/$1"
+    "@src/(.*)": "<rootDir>/src/$1"
   },
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",

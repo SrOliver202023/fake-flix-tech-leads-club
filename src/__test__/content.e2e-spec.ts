@@ -3,15 +3,15 @@
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
-import { PrismaService } from '@src/prisma.service';
+import { ContentRepository } from '@src/persistence/repository/content.repository';
 import fs from 'node:fs';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
-describe('VideoController (e2e)', () => {
+describe('VideoController (e2e) | Content', () => {
   let module: TestingModule;
   let app: INestApplication;
-  let prismaService: PrismaService;
+  let contentRepository: ContentRepository;
 
   beforeAll(async () => {
     module = await Test.createTestingModule({
@@ -22,7 +22,7 @@ describe('VideoController (e2e)', () => {
     await app.init();
 
     // No beforeEach e mais seguro
-    prismaService = module.get<PrismaService>(PrismaService);
+    contentRepository = module.get<ContentRepository>(ContentRepository);
   });
 
   beforeEach(() => {
@@ -32,7 +32,7 @@ describe('VideoController (e2e)', () => {
   });
 
   afterEach(async () => {
-    await prismaService.video.deleteMany();
+    await contentRepository.clear();
   });
 
   afterAll(async () => {
@@ -45,8 +45,8 @@ describe('VideoController (e2e)', () => {
       const video = {
         title: 'Test Video',
         description: 'This is a test video',
-        videoUrl: 'uploads/sample.mp4',
-        thumbnailUrl: 'uploads/sample.jpg',
+        videoUrl: './test/fixtures/sample.mp4',
+        thumbnailUrl: './test/fixtures/sample.jpg',
         sizeInKb: 33081763,
         duration: 100,
       };
@@ -118,40 +118,6 @@ describe('VideoController (e2e)', () => {
           error: 'Bad Request',
           statusCode: 400,
         });
-    });
-  });
-
-  describe('/streams/:videoId (GET)', () => {
-    it('streams a video', async () => {
-      const { body: sampleVideo } = await request(app.getHttpServer() as App)
-        .post('/video')
-        .attach('video', './test/fixtures/sample.mp4')
-        .attach('thumbnail', './test/fixtures/sample.jpg')
-        .field('title', 'Sample Video')
-        .field('description', 'This is a sample video')
-        .expect(HttpStatus.CREATED);
-
-      const fileSize = 33081763;
-      const range = `bytes=0-${fileSize - 1}`;
-
-      const response = await request(app.getHttpServer() as App)
-        .get(`/stream/${sampleVideo.id}`)
-        .set('Range', range)
-        .expect(HttpStatus.PARTIAL_CONTENT);
-
-      expect(response.headers['content-range']).toBe(
-        `bytes 0-${fileSize - 1}/${fileSize}`,
-      );
-
-      expect(response.headers['accept-ranges']).toBe('bytes');
-      expect(response.headers['content-length']).toBe(String(fileSize));
-      expect(response.headers['content-type']).toBe('video/mp4');
-    });
-
-    it('returns 404 if the video is not found', async () => {
-      await request(app.getHttpServer() as App)
-        .get('/stream/invalid-video-id')
-        .expect(HttpStatus.NOT_FOUND);
     });
   });
 });
