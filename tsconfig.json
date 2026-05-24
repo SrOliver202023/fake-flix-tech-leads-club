@@ -25,10 +25,18 @@
     "strictPropertyInitialization": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
+
     "paths": {
       "@src/*": ["./src/*"],
       "@resource/*": ["./resource/*"]
     },
-    "types": ["jest"]
-  }
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "src/**/*",
+    "test/jest.config.ts",
+    "test/jest.e2e.ts",
+    "test/**/*",
+    "prisma.config.ts" // <-- Tells TS to look at this file too
+  ]
 }
